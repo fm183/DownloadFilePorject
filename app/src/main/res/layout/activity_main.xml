@@ -1,0 +1,35 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_marginTop="20dp"
+        android:id="@+id/tv_percent"
+        android:text="@string/download_progress"
+        android:layout_width="match_parent"
+        android:gravity="center"
+        android:layout_height="wrap_content" />
+    <ProgressBar
+        android:layout_marginTop="20dp"
+        android:id="@+id/pb_percent"
+        android:layout_below="@+id/tv_percent"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="2.5dp" />
+    <Button
+        android:layout_marginTop="20dp"
+        android:layout_below="@+id/pb_percent"
+        android:id="@+id/btn_start_download"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="开始下载"/>
+    <Button
+        android:layout_marginTop="20dp"
+        android:layout_below="@+id/btn_start_download"
+        android:id="@+id/btn_stop_download"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="暂停下载"/>
+
+</RelativeLayout>

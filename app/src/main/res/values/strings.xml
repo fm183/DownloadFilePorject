@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">DownLoadFileProject</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="download_progress">下载进度：</string>
+</resources>
