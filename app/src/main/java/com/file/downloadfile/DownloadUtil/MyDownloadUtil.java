@@ -23,7 +23,7 @@ import java.text.DecimalFormat;
 public class MyDownloadUtil {
     private static final String FILE_DIR = "downloadFile";
     private static DownloadBean downloadBean;
-
+    private String testCommit;
 
     /**
      * 下载文件
