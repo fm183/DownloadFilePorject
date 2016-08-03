@@ -21,6 +21,20 @@ public class DownloadBean {
      */
     private String downloadUrl = "";
 
+    /**
+     * 文件下载进度
+     */
+    private int downloadProgress;
+
+    public int getDownloadProgress() {
+        return downloadProgress;
+    }
+
+    public void setDownloadProgress(int downloadProgress) {
+        this.downloadProgress = downloadProgress;
+
+    }
+
     public void setDownloadSize(long downloadSize) {
         this.downloadSize = downloadSize;
     }
@@ -60,6 +74,7 @@ public class DownloadBean {
         sb.append(", fileSize=").append(fileSize);
         sb.append(", fileName='").append(fileName).append('\'');
         sb.append(", downloadUrl='").append(downloadUrl).append('\'');
+        sb.append(", downloadProgress=").append(downloadProgress);
         sb.append('}');
         return sb.toString();
     }
