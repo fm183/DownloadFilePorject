@@ -26,6 +26,19 @@ public class DownloadBean {
      */
     private int downloadProgress;
 
+    /**
+     * 是否停止文件下载
+     */
+    private boolean isStopDownloadFile;
+
+    public boolean isStopDownloadFile() {
+        return isStopDownloadFile;
+    }
+
+    public void setIsStopDownloadFile(boolean isStopDownloadFile) {
+        this.isStopDownloadFile = isStopDownloadFile;
+    }
+
     public int getDownloadProgress() {
         return downloadProgress;
     }

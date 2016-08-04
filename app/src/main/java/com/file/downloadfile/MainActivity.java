@@ -7,7 +7,6 @@ import android.os.Message;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import com.file.downloadfile.DownloadUtil.MyDownloadUtil;
@@ -18,14 +17,12 @@ public class MainActivity extends Activity implements View.OnClickListener{
 
     private TextView tvPercent;
     private ProgressBar pbPercent;
-    private Button btnStartDownload,btnStopDownload;
     private static final String DOWNLOAD_URL = "http://pa-package-object.oss-cn-beijing.aliyuncs.com/f101a283db8943478d6cdd3004725232";
     public static final int STATE_START_DOWNLOAD = 0; // 开始下载
     public static final int STATE_DOWNLOADING = 1;   //  下载中
     public static final int STATE_FINISH_DOWNLOAD = 2;  // 下载完成
     private MyDownloadUtil myDownloadUtil;
     private  DownloadBean downloadBean;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,15 +31,11 @@ public class MainActivity extends Activity implements View.OnClickListener{
         downloadBean = myDownloadUtil.getDownloadInfo();
         initView();
     }
-
     private void initView() {
         tvPercent = (TextView) findViewById(R.id.tv_percent);
         pbPercent = (ProgressBar) findViewById(R.id.pb_percent);
-
-        btnStartDownload = (Button) findViewById(R.id.btn_start_download);
-        btnStopDownload = (Button)findViewById(R.id.btn_stop_download);
-        btnStartDownload.setOnClickListener(this);
-        btnStopDownload.setOnClickListener(this);
+        findViewById(R.id.btn_start_download).setOnClickListener(this);
+        findViewById(R.id.btn_stop_download).setOnClickListener(this);
         if(downloadBean == null){
             downloadBean = new DownloadBean();
             tvPercent.setText(R.string.download_progress+downloadBean.getDownloadProgress());
@@ -53,56 +46,56 @@ public class MainActivity extends Activity implements View.OnClickListener{
             }
         }
     }
+    private Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            myDownloadUtil.startDownload(downloadBean, DOWNLOAD_URL, new MyDownloadUtil.DownloadFileStateListener() {
+                @Override
+                public void onStartDownload(int progress) {
+                    Message message = handler.obtainMessage();
+                    message.what = STATE_START_DOWNLOAD;
+                    message.arg1 = progress;
+                    handler.sendMessage(message);
+                }
+
+                @Override
+                public void onDownloadProgress(int progress, String downloadSize) {
+                    Message message = handler.obtainMessage();
+                    message.what = STATE_DOWNLOADING;
+                    message.arg1 = progress;
+                    handler.sendMessage(message);
+                }
+
+                @Override
+                public void onDownloadFinish() {
+                    Message message = handler.obtainMessage();
+                    message.what = STATE_FINISH_DOWNLOAD;
+                    handler.sendMessage(message);
+                }
+
+                @Override
+                public void onStopDownload() {
+
+                }
+            });
+        }
+    };
 
     @Override
     public void onClick(View view) {
         switch (view.getId()){
             case R.id.btn_start_download:
-                System.out.println("onClickonClickonClickonClick");
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        System.out.println("runrunrunrunrun");
-                        myDownloadUtil.startDownloadFile(downloadBean,DOWNLOAD_URL, new MyDownloadUtil.DownloadFileStateListener() {
-                            @Override
-                            public void onStartDownload(int progress) {
-                                Message message = handler.obtainMessage();
-                                message.what = STATE_START_DOWNLOAD;
-                                message.arg1 = progress;
-                                handler.sendMessage(message);
-                            }
-
-                            @Override
-                            public void onDownloadProgress(int progress,String downloadSize) {
-                                Message message = handler.obtainMessage();
-                                message.what = STATE_DOWNLOADING;
-                                message.arg1 = progress;
-                                handler.sendMessage(message);
-                            }
-
-                            @Override
-                            public void onDownloadFinish() {
-                                Message message = handler.obtainMessage();
-                                message.what = STATE_FINISH_DOWNLOAD;
-                                handler.sendMessage(message);
-                            }
-
-                            @Override
-                            public void onStopDownload() {
-
-                            }
-                        });
-                    }
-                }).start();
+                startDownloadFile();
                 break;
             case R.id.btn_stop_download:
-                if(myDownloadUtil!=null){
-                    myDownloadUtil.stopDownloadFile();
-                }
+                stopDownloadFile();
                 break;
         }
     }
 
+    /**
+     * 处理下载文件的消息
+     */
     private Handler handler = new Handler(){
         @Override
         public void handleMessage(Message msg) {
@@ -127,7 +120,27 @@ public class MainActivity extends Activity implements View.OnClickListener{
         }
     };
 
+    /**
+     * 停止下载文件
+     */
+    public void stopDownloadFile(){
+        downloadBean.setIsStopDownloadFile(false);
+        handler.removeCallbacks(runnable);
+    }
 
+    /**
+     * 开始下载文件
+     */
+    public void startDownloadFile(){
+        downloadBean.setIsStopDownloadFile(false);
+        new Thread(runnable).start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        stopDownloadFile();
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -142,12 +155,10 @@ public class MainActivity extends Activity implements View.OnClickListener{
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 }

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;
 import android.text.TextUtils;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.file.downloadfile.bean.DownloadBean;
@@ -13,14 +12,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -38,11 +33,22 @@ public class MyDownloadUtil {
     private OutputStream mOutputStream;
     private ByteArrayOutputStream mByteOutput;
     private Context mContext;
-    private boolean isStopDownloadFile; // 标识是否停止下载文件
 
     public MyDownloadUtil(Context context){
         this.mContext = context;
     }
+
+    /**
+     * 开始下载
+     * @param downloadBean
+     * @param downloadUrl
+     * @param downloadFileStateListener
+     */
+    public void startDownload(DownloadBean downloadBean,String downloadUrl,DownloadFileStateListener downloadFileStateListener){
+        this.downloadBean = downloadBean;
+        downloadFile(downloadUrl,downloadFileStateListener);
+    }
+
 
     /**
      * 临时文件对象
@@ -61,13 +67,17 @@ public class MyDownloadUtil {
         URL url = null;
         HttpURLConnection httpURLConnection = null;
         BufferedInputStream bufferedReader;
-        if(isStopDownloadFile){
+        if(downloadBean.isStopDownloadFile()){
             return;
         }
         try {
             url = new URL(downloadUrl);
             httpURLConnection = (HttpURLConnection)url.openConnection();
             httpURLConnection.setUseCaches(false);  // 请求时不使用缓存
+            httpURLConnection.setConnectTimeout(5 * 1000); // 设置连接超时时间
+            httpURLConnection.setRequestMethod("GET");
+            httpURLConnection.setRequestProperty("Accept-Language", "zh-CN");
+            httpURLConnection.setRequestProperty("Charset", "UTF-8");
             createBasePath(mContext);
             if(mLoadedByteLength > 0 && mLoadedByteLength < mTotalByteLength){
                 httpURLConnection.setRequestProperty("Range", "bytes=" + mLoadedByteLength + "-");
@@ -80,10 +90,6 @@ public class MyDownloadUtil {
                 }
             }
             httpURLConnection.connect();
-            /*httpURLConnection.setConnectTimeout(5 * 1000); // 设置连接超时时间
-            httpURLConnection.setRequestMethod("GET");
-            httpURLConnection.setRequestProperty("Accept-Language", "zh-CN");
-            httpURLConnection.setRequestProperty("Charset", "UTF-8");*/
             int bufferSize = 1024;
             bufferedReader = new BufferedInputStream(httpURLConnection.getInputStream(),bufferSize); //为InputStream类增加缓冲区功能
             if(mTotalByteLength == 0){
@@ -101,7 +107,7 @@ public class MyDownloadUtil {
                 writeCache();
                 readProgress(mLoadedByteLength, mTotalByteLength,downloadFileStateListener);
                 saveDownloadInfo(mContext);
-                if(isStopDownloadFile){
+                if(downloadBean.isStopDownloadFile()){
                     downloadFileStateListener.onStopDownload();
                     break;
                 }
@@ -120,6 +126,10 @@ public class MyDownloadUtil {
         }
     }
 
+    /**
+     * 取得文件下载信息
+     * @return
+     */
     public DownloadBean getDownloadInfo(){
         createSharedPreference();
         String downloadInfo = sharedPreferences.getString("downloadInfo","");
@@ -139,7 +149,22 @@ public class MyDownloadUtil {
         return new DownloadBean();
     }
 
+    /**
+     * 删除文件下载信息
+     */
+    public void deleDownloadInfo(){
+        createSharedPreference();
+        String downloadInfo = sharedPreferences.getString("downloadInfo","");
+        if(TextUtils.isEmpty(downloadInfo)){
+            editor.putString("downloadInfo","");
+            editor.commit();
+        }
+    }
 
+    /**
+     * 保存文件下载信息
+     * @param context
+     */
     public void saveDownloadInfo(Context context){
         if(downloadBean == null){
             return;
@@ -174,9 +199,9 @@ public class MyDownloadUtil {
      * @param downloadLength,totalLength
      */
     private void readProgress(long downloadLength,long totalLength,DownloadFileStateListener downloadFileStateListener){
-        int progress = conversionPercent(downloadLength,totalLength);
-        String totalSize = formatDouble(downloadLength,1024);
-        downloadFileStateListener.onDownloadProgress(progress,totalSize);
+        int progress = conversionPercent(downloadLength, totalLength);
+        String totalSize = formatDouble(downloadLength, 1024);
+        downloadFileStateListener.onDownloadProgress(progress, totalSize);
         downloadBean.setDownloadSize(mLoadedByteLength);
         downloadFileStateListener.onStartDownload(progress);
         if(progress == 100){
@@ -314,92 +339,6 @@ public class MyDownloadUtil {
             basePath += "/";
         }
     }
-
-
-
-  /*  static File file = null;
-    static FileInputStream fileInputStream = null;
-    static String fileName = "";
-    /*
-    /**
-     * 读取下载文件的大小
-     * @param fileName
-     * @return
-     *//*
-    private static long readDownloadFileSize(String fileName){
-        long fileLength = 0;
-        try {
-            if(file == null){
-                file  = new File(creatFilePath(fileName));
-            }
-            fileInputStream = null;
-            fileInputStream = new FileInputStream(file);
-            fileLength = fileInputStream.available();
-            fileInputStream.close();
-        }catch (FileNotFoundException fileNotFoundException){
-            fileNotFoundException.printStackTrace();
-        }catch (IOException ioException){
-            ioException.printStackTrace();
-        }
-        return fileLength;
-    }
-
-
-    /*
-    /**
-     * 创建文件
-     * @return 存储文件的路径
-     * @param fileName
-     *//*
-    private static String creatFilePath(String fileName){
-        String filePath = "";
-        if(Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
-            filePath = Environment.getExternalStorageDirectory() + File.separator + FILE_DIR;
-            System.out.println("filePath==========="+filePath);
-            try {
-                fileName = createFile(createFileDir(filePath)+fileName);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return fileName;
-    }
-
-    private static String createFileDir(String filePath){
-        System.out.println("createFileDir  filePath===="+filePath);
-        File file = new File(filePath);
-        if(!file.exists()){
-            file.mkdir();
-        }
-        return filePath;
-    }
-    private static String createFile(String fileName) throws IOException {
-        System.out.println("createFile  fileName===="+fileName);
-        File file = new File(fileName);
-        if(file.exists()){
-            file.delete();
-        }
-        file.createNewFile();
-        return fileName;
-    }
-*/
-
-    /**
-     * 停止下载文件
-     */
-    public void stopDownloadFile(){
-        isStopDownloadFile = true;
-    }
-
-    /**
-     * 开始下载文件
-     */
-    public void startDownloadFile(DownloadBean downloadBean,String downloadUrl,DownloadFileStateListener downloadFileStateListener){
-        isStopDownloadFile = false;
-        this.downloadBean = downloadBean;
-        downloadFile(downloadUrl,downloadFileStateListener);
-    }
-
 
     public interface DownloadFileStateListener{
         /**
