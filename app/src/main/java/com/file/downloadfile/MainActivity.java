@@ -28,7 +28,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         myDownloadUtil = new MyDownloadUtil(this);
-        downloadBean = myDownloadUtil.getDownloadInfo();
+        downloadBean = myDownloadUtil.getDownloadFileInfo();
         initView();
     }
     private void initView() {
@@ -38,14 +38,17 @@ public class MainActivity extends Activity implements View.OnClickListener{
         findViewById(R.id.btn_stop_download).setOnClickListener(this);
         if(downloadBean == null){
             downloadBean = new DownloadBean();
-            tvPercent.setText(R.string.download_progress+downloadBean.getDownloadProgress());
+        }
+            tvPercent.setText("下载进度：" + downloadBean.getDownloadProgress()+"%");
             if(downloadBean.getDownloadProgress() > 0){
                 pbPercent.setVisibility(View.VISIBLE);
             }else{
                 pbPercent.setVisibility(View.GONE);
             }
-        }
     }
+
+
+
     private Runnable runnable = new Runnable() {
         @Override
         public void run() {
@@ -103,13 +106,13 @@ public class MainActivity extends Activity implements View.OnClickListener{
             int progress = msg.arg1;
             switch (msg.what){
                 case STATE_START_DOWNLOAD:
-                    tvPercent.setText(R.string.download_progress + progress + "%");
+                    tvPercent.setText("下载进度：" + progress + "%");
                     pbPercent.setVisibility(View.VISIBLE);
                     pbPercent.setProgress(progress);
                     break;
                 case STATE_DOWNLOADING:
 
-                    tvPercent.setText(R.string.download_progress+progress + "%");
+                    tvPercent.setText("下载进度："+progress + "%");
                     pbPercent.setProgress(progress);
                     break;
                 case STATE_FINISH_DOWNLOAD:
@@ -124,7 +127,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
      * 停止下载文件
      */
     public void stopDownloadFile(){
-        downloadBean.setIsStopDownloadFile(false);
+        downloadBean.setIsStopDownloadFile(true);
         handler.removeCallbacks(runnable);
     }
 

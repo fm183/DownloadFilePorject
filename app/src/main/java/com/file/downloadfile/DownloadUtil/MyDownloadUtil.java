@@ -64,6 +64,10 @@ public class MyDownloadUtil {
         if(downloadBean == null){
             downloadBean = new DownloadBean();
         }
+        System.out.println("downloadBean===="+downloadBean.toString());
+        mLoadedByteLength = downloadBean.getDownloadSize();
+        mTotalByteLength = downloadBean.getFileSize();
+        System.out.println("mLoadedByteLength===="+mLoadedByteLength+",mTotalByteLength==="+mTotalByteLength);
         URL url = null;
         HttpURLConnection httpURLConnection = null;
         BufferedInputStream bufferedReader;
@@ -82,12 +86,21 @@ public class MyDownloadUtil {
             if(mLoadedByteLength > 0 && mLoadedByteLength < mTotalByteLength){
                 httpURLConnection.setRequestProperty("Range", "bytes=" + mLoadedByteLength + "-");
             }else{
-                getDownloadInfo(httpURLConnection,downloadUrl);
+                getDownloadFileInfo(httpURLConnection, downloadUrl);
+                if(downloadBean.getDownloadProgress() == 100 || mLoadedByteLength == mTotalByteLength){
+                    deleDownloadInfo();
+                    deleteAndCreatFilePath(downloadBean.getFileName(),false);
+                    downloadBean = null;
+                    downloadBean = new DownloadBean();
+                }
                 mTempFile = createTempFile(downloadBean.getFileName());
                 if(mTempFile == null){
                     Toast.makeText(mContext,"创建临时文件失败，请重新点击下载！",Toast.LENGTH_SHORT).show();
                     return;
                 }
+            }
+            if(mTempFile == null){
+                mTempFile = createTempFile(downloadBean.getFileName());
             }
             httpURLConnection.connect();
             int bufferSize = 1024;
@@ -105,7 +118,7 @@ public class MyDownloadUtil {
             while((len = bufferedReader.read(buffer)) != -1) {
                 mByteOutput.write(buffer,0,len);
                 writeCache();
-                readProgress(mLoadedByteLength, mTotalByteLength,downloadFileStateListener);
+                readProgress(mLoadedByteLength, mTotalByteLength, downloadFileStateListener);
                 saveDownloadInfo(mContext);
                 if(downloadBean.isStopDownloadFile()){
                     downloadFileStateListener.onStopDownload();
@@ -130,10 +143,12 @@ public class MyDownloadUtil {
      * 取得文件下载信息
      * @return
      */
-    public DownloadBean getDownloadInfo(){
+    public DownloadBean getDownloadFileInfo(){
         createSharedPreference();
         String downloadInfo = sharedPreferences.getString("downloadInfo","");
+        System.out.println("downloadInfo=====" + downloadInfo);
         if(!TextUtils.isEmpty(downloadInfo)){
+            System.out.println("TextUtils.isEmpty(downloadInfo)======"+TextUtils.isEmpty(downloadInfo));
             try {
                 JSONObject jsonObject = new JSONObject(downloadInfo);
                 DownloadBean  myDownloadBean = new DownloadBean();
@@ -141,6 +156,8 @@ public class MyDownloadUtil {
                 myDownloadBean.setFileSize(jsonObject.getLong("fileSize"));
                 myDownloadBean.setFileName(jsonObject.getString("fileName"));
                 myDownloadBean.setDownloadUrl(jsonObject.getString("downloadUrl"));
+                myDownloadBean.setDownloadProgress(jsonObject.getInt("downloadProgress"));
+                System.out.println("myDownloadBean======" + myDownloadBean.toString());
                 return myDownloadBean;
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -176,6 +193,7 @@ public class MyDownloadUtil {
                 jsonObject.put("downloadUrl",downloadBean.getDownloadUrl());
                 jsonObject.put("fileName",downloadBean.getFileName());
                 jsonObject.put("fileSize",downloadBean.getFileSize());
+                jsonObject.put("downloadProgress",downloadBean.getDownloadProgress());
             }catch (JSONException exception){
                 exception.printStackTrace();
             }
@@ -203,9 +221,12 @@ public class MyDownloadUtil {
         String totalSize = formatDouble(downloadLength, 1024);
         downloadFileStateListener.onDownloadProgress(progress, totalSize);
         downloadBean.setDownloadSize(mLoadedByteLength);
+        downloadBean.setDownloadProgress(progress);
         downloadFileStateListener.onStartDownload(progress);
         if(progress == 100){
             downloadFileStateListener.onDownloadFinish();
+            mTotalByteLength = 0;
+            mLoadedByteLength = 0;
         }
     }
 
@@ -215,11 +236,11 @@ public class MyDownloadUtil {
      * @return
      */
     private int conversionPercent(long length,long totalLength){
-        System.out.println("length=============="+length);
-        System.out.println("getFileSize==========="+totalLength);
+        System.out.println("length==============" + length);
+        System.out.println("getFileSize===========" + totalLength);
         String per =  formatDouble(length,totalLength);
         int percent = (int)(Double.parseDouble(per) * 100);
-        System.out.println("percent========="+percent);
+        System.out.println("percent=========" + percent);
         return percent;
     }
 
@@ -244,7 +265,7 @@ public class MyDownloadUtil {
      * 写缓存
      */
     private synchronized void writeCache(){
-        if(mByteOutput != null && mByteOutput.size() >0 && mOutputStream!= null){
+        if(mByteOutput != null && mByteOutput.size() > 0 && mOutputStream!= null){
             try {
                 mByteOutput.writeTo(mOutputStream);
                 mLoadedByteLength += mByteOutput.size();
@@ -255,9 +276,8 @@ public class MyDownloadUtil {
         }
         System.out.println("mLoadedByteLength====="+mLoadedByteLength+",mTotalByteLength===="+mTotalByteLength);
         if(mLoadedByteLength >= mTotalByteLength){  // 下载完成后重命名
-            mTempFile.renameTo(creatFilePath(downloadBean.getFileName()));
+            mTempFile.renameTo(deleteAndCreatFilePath(downloadBean.getFileName(),true));
         }
-
     }
 
 
@@ -265,7 +285,7 @@ public class MyDownloadUtil {
      * 获取下载信息
      * @param connection
      */
-    private void getDownloadInfo(HttpURLConnection connection,String downloadUrl){
+    private void getDownloadFileInfo(HttpURLConnection connection, String downloadUrl){
         long fileLength = connection.getContentLength(); // 获取文件的大小
         String fileName = connection.getHeaderField("Content-Disposition"); // 获取文件名
         downloadBean.setFileSize(fileLength);
@@ -284,6 +304,7 @@ public class MyDownloadUtil {
     private File createTempFile(String fileName){
         File file = new File(basePath + fileName + ".dl");
         if(file.exists()){
+            System.out.println("existsexistsexists");
             file.delete();
         }
         try {
@@ -292,26 +313,35 @@ public class MyDownloadUtil {
             e.printStackTrace();
             file = null;
         }
+        if(file == null){
+            System.out.println("nullnullnull");
+        }else{
+            System.out.println("createTempFile====="+file.getName());
+        }
         return file;
     }
 
     /**
      * 下载完成后保存文件
      * @param fileName
+     * @param isDeletedCreate // 是否删除并创建文件
      * @return 创建新文件   创建过程中出现异常返回null
      */
-    private File creatFilePath(String fileName){
+    private File deleteAndCreatFilePath(String fileName,boolean isDeletedCreate){
         File file = new File(basePath + fileName);
         if(file.exists()){ // 如果存在先删除
             file.delete();
         }
-        try {
-            file.createNewFile();
-            System.out.println("fileName==========" + file.getName());
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
+        if(isDeletedCreate){
+            try {
+                file.createNewFile();
+                System.out.println("fileName==========" + file.getName());
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
         }
+        System.out.println("deleteAndCreatFilePath====="+file.getName());
         return file;
     }
 
