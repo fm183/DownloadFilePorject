@@ -14,6 +14,8 @@ import org.json.JSONObject;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -61,13 +63,7 @@ public class MyDownloadUtil {
      */
     private void downloadFile(String downloadUrl,DownloadFileStateListener downloadFileStateListener){
         System.out.println("downloadFiledownloadFiledownloadFile");
-        if(downloadBean == null){
-            downloadBean = new DownloadBean();
-        }
         System.out.println("downloadBean===="+downloadBean.toString());
-        mLoadedByteLength = downloadBean.getDownloadSize();
-        mTotalByteLength = downloadBean.getFileSize();
-        System.out.println("mLoadedByteLength===="+mLoadedByteLength+",mTotalByteLength==="+mTotalByteLength);
         URL url = null;
         HttpURLConnection httpURLConnection = null;
         BufferedInputStream bufferedReader;
@@ -83,6 +79,12 @@ public class MyDownloadUtil {
             httpURLConnection.setRequestProperty("Accept-Language", "zh-CN");
             httpURLConnection.setRequestProperty("Charset", "UTF-8");
             createBasePath(mContext);
+            if(TextUtils.isEmpty(downloadBean.getFileName())){
+                getDownloadFileInfo(httpURLConnection, downloadUrl);
+            }
+            mLoadedByteLength = downloadBean.getDownloadSize();
+            mTotalByteLength = downloadBean.getFileSize();
+            System.out.println("mLoadedByteLength===="+mLoadedByteLength+",mTotalByteLength==="+mTotalByteLength);
             if(mLoadedByteLength > 0 && mLoadedByteLength < mTotalByteLength){
                 httpURLConnection.setRequestProperty("Range", "bytes=" + mLoadedByteLength + "-");
             }else{
@@ -93,6 +95,7 @@ public class MyDownloadUtil {
                     downloadBean = null;
                     downloadBean = new DownloadBean();
                 }
+                System.out.println("downloadBean==========="+downloadBean.toString());
                 mTempFile = createTempFile(downloadBean.getFileName());
                 if(mTempFile == null){
                     Toast.makeText(mContext,"创建临时文件失败，请重新点击下载！",Toast.LENGTH_SHORT).show();
@@ -146,19 +149,29 @@ public class MyDownloadUtil {
     public DownloadBean getDownloadFileInfo(){
         createSharedPreference();
         String downloadInfo = sharedPreferences.getString("downloadInfo","");
-        System.out.println("downloadInfo=====" + downloadInfo);
+        System.out.println("getDownloadFileInfo     downloadInfo=====" + downloadInfo);
         if(!TextUtils.isEmpty(downloadInfo)){
             System.out.println("TextUtils.isEmpty(downloadInfo)======"+TextUtils.isEmpty(downloadInfo));
             try {
                 JSONObject jsonObject = new JSONObject(downloadInfo);
                 DownloadBean  myDownloadBean = new DownloadBean();
-                myDownloadBean.setDownloadSize(jsonObject.getLong("downloadSize"));
-                myDownloadBean.setFileSize(jsonObject.getLong("fileSize"));
-                myDownloadBean.setFileName(jsonObject.getString("fileName"));
-                myDownloadBean.setDownloadUrl(jsonObject.getString("downloadUrl"));
-                myDownloadBean.setDownloadProgress(jsonObject.getInt("downloadProgress"));
-                System.out.println("myDownloadBean======" + myDownloadBean.toString());
-                return myDownloadBean;
+                String fileName = "";
+                if(jsonObject.getLong("fileSize") == jsonObject.getLong("downloadSize")){
+                    fileName = jsonObject.getString("fileName");
+                }else {
+                    fileName = jsonObject.getString("fileName") + ".dl";
+                }
+                if(readFileInfo(fileName)){
+                    myDownloadBean.setDownloadSize(jsonObject.getLong("downloadSize"));
+                    myDownloadBean.setFileSize(jsonObject.getLong("fileSize"));
+                    myDownloadBean.setFileName(jsonObject.getString("fileName"));
+                    myDownloadBean.setDownloadUrl(jsonObject.getString("downloadUrl"));
+                    myDownloadBean.setDownloadProgress(jsonObject.getInt("downloadProgress"));
+                    System.out.println("myDownloadBean======" + myDownloadBean.toString());
+                    return myDownloadBean;
+                }else {
+                    deleDownloadInfo();
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -217,8 +230,13 @@ public class MyDownloadUtil {
      * @param downloadLength,totalLength
      */
     private void readProgress(long downloadLength,long totalLength,DownloadFileStateListener downloadFileStateListener){
+        System.out.println("downloadLength=-====="+downloadLength+",totalLength======="+totalLength);
+        if(totalLength == 0){
+
+            return;
+        }
         int progress = conversionPercent(downloadLength, totalLength);
-        String totalSize = formatDouble(downloadLength, 1024);
+        String totalSize = formatDouble(downloadLength, totalLength);
         downloadFileStateListener.onDownloadProgress(progress, totalSize);
         downloadBean.setDownloadSize(mLoadedByteLength);
         downloadBean.setDownloadProgress(progress);
@@ -238,9 +256,8 @@ public class MyDownloadUtil {
     private int conversionPercent(long length,long totalLength){
         System.out.println("length==============" + length);
         System.out.println("getFileSize===========" + totalLength);
-        String per =  formatDouble(length,totalLength);
-        int percent = (int)(Double.parseDouble(per) * 100);
-        System.out.println("percent=========" + percent);
+        int percent = (int) (length * 100 / totalLength);
+        System.out.println("percent======"+percent);
         return percent;
     }
 
@@ -257,9 +274,6 @@ public class MyDownloadUtil {
         String str =  df.format(d);
         return str;
     }
-
-
-
 
     /**
      * 写缓存
@@ -293,6 +307,7 @@ public class MyDownloadUtil {
         downloadBean.setFileName(fileName);
         System.out.println("fileLength=======" + fileLength);
         System.out.println("downloadUrl=======" + downloadUrl);
+        System.out.println("fileName=========="+fileName);
     }
 
 
@@ -302,6 +317,7 @@ public class MyDownloadUtil {
      * @return 创建新文件   创建过程中出现异常返回null
      */
     private File createTempFile(String fileName){
+        System.out.println("createTempFile  fileName======"+fileName);
         File file = new File(basePath + fileName + ".dl");
         if(file.exists()){
             System.out.println("existsexistsexists");
@@ -355,20 +371,50 @@ public class MyDownloadUtil {
      * @return
      */
     private void createBasePath(Context contex){
-        File file = null;
-        if(Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
-            file = new File(Environment.getExternalStorageDirectory(),FILE_DIR);
-        }else{
-           file = contex.getApplicationContext().getCacheDir();
-        }
-        if(!file.exists()||!file.isDirectory()){
-            file.mkdirs();
-        }
-        basePath = file.getAbsolutePath();
-        if(!basePath.toString().endsWith("/")){
-            basePath += "/";
+        if(TextUtils.isEmpty(basePath)){
+            File file = null;
+            if(Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
+                file = new File(Environment.getExternalStorageDirectory(),FILE_DIR);
+            }else{
+                file = contex.getApplicationContext().getCacheDir();
+            }
+            if(!file.exists()||!file.isDirectory()){
+                file.mkdirs();
+            }
+            basePath = file.getAbsolutePath();
+            if(!basePath.toString().endsWith("/")){
+                basePath += "/";
+            }
         }
     }
+
+    /**
+     * 读取下载至本地的文件信息
+     * @param fileName
+     * @return  文件是否存在
+     */
+    private boolean readFileInfo(String fileName){
+        createBasePath(mContext);
+        File file = new File(basePath +fileName);
+        System.out.println(basePath+fileName);
+        long fileSize = 0;
+        if(file.exists()){
+            System.out.println("readFileInfoexistsexistsexists");
+            try {
+                FileInputStream fileInputStream = new FileInputStream(file);
+                fileSize = fileInputStream.available();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println(""+fileSize);
+        return fileSize > 0;
+    }
+
+
+
 
     public interface DownloadFileStateListener{
         /**
