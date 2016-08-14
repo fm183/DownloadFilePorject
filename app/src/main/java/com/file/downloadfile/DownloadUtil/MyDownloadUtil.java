@@ -79,13 +79,13 @@ public class MyDownloadUtil {
             httpURLConnection.setRequestProperty("Accept-Language", "zh-CN");
             httpURLConnection.setRequestProperty("Charset", "UTF-8");
             createBasePath(mContext);
-            if(TextUtils.isEmpty(downloadBean.getFileName())){
+            if(TextUtils.isEmpty(downloadBean.getFileName())){ //  判断是否获取到文件名，没有就去获取下载文件信息
                 getDownloadFileInfo(httpURLConnection, downloadUrl);
             }
             mLoadedByteLength = downloadBean.getDownloadSize();
             mTotalByteLength = downloadBean.getFileSize();
             System.out.println("mLoadedByteLength===="+mLoadedByteLength+",mTotalByteLength==="+mTotalByteLength);
-            if(mLoadedByteLength > 0 && mLoadedByteLength < mTotalByteLength){
+            if(mLoadedByteLength > 0 && mLoadedByteLength < mTotalByteLength){   // 如果已经在下载了，而且没下载完成就暂停，则继续接着上次的进度下载
                 httpURLConnection.setRequestProperty("Range", "bytes=" + mLoadedByteLength + "-");
             }else{
                 getDownloadFileInfo(httpURLConnection, downloadUrl);
@@ -348,7 +348,7 @@ public class MyDownloadUtil {
         if(file.exists()){ // 如果存在先删除
             file.delete();
         }
-        if(isDeletedCreate){
+        if(isDeletedCreate){ //为true创建新文件
             try {
                 file.createNewFile();
                 System.out.println("fileName==========" + file.getName());
@@ -414,8 +414,9 @@ public class MyDownloadUtil {
     }
 
 
-
-
+    /**
+     * 文件下载监听
+     */
     public interface DownloadFileStateListener{
         /**
          * 开始下载
