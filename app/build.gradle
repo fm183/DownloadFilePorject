@@ -21,4 +21,5 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
+    debugCompile 'com.amitshekhar.android:debug-db:1.0.0'
 }

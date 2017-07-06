@@ -31,13 +31,17 @@ public class FileDownload {
      * 文件下载详情
      */
     private static DownloadFileInfo mDownloadFileInfo;
+    /**
+     * 是否是debug模式
+     */
+    private static boolean isDebugModel;
+
 
     /**
      * 开始下载
      * @param downloadurl  文件url地址
      */
     public static void start(String downloadurl){
-
         String basePath = FileUtils.createBasePath(FILE_DOWNLOAD_DIR);
         URL url = null;
         HttpURLConnection httpURLConnection = null;
@@ -71,4 +75,11 @@ public class FileDownload {
         mFileDownloadListener = fileDownloadListener;
     }
 
+    public static void setDebugModel(){
+
+    }
+
+    public static boolean getDebugModel(){
+        return isDebugModel;
+    }
 }

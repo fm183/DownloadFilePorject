@@ -9,6 +9,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
 import com.file.downloadfile.Utils.MyDownloadUtil;
 import com.file.downloadfile.bean.DownloadBean;
 
