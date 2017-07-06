@@ -45,7 +45,6 @@ public class DownloadBean {
 
     public void setDownloadProgress(int downloadProgress) {
         this.downloadProgress = downloadProgress;
-
     }
 
     public void setDownloadSize(long downloadSize) {

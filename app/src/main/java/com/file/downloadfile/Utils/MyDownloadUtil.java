@@ -1,4 +1,4 @@
-package com.file.downloadfile.DownloadUtil;
+package com.file.downloadfile.Utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
