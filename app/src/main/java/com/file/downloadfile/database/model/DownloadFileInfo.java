@@ -1,31 +1,42 @@
-package com.file.downloadfile.bean;
+package com.file.downloadfile.database.model;
+
+import com.file.downloadfile.database.DownloadInfoDatabase;
+import com.raizlabs.android.dbflow.annotation.Column;
+import com.raizlabs.android.dbflow.annotation.PrimaryKey;
+import com.raizlabs.android.dbflow.annotation.Table;
+import com.raizlabs.android.dbflow.structure.BaseModel;
 
 /**
  * 文件下载详情
  */
+@Table(database = DownloadInfoDatabase.class)
+public class DownloadFileInfo extends BaseModel{
 
-public class DownloadFileInfo {
 
-    private String id;
+    @PrimaryKey(autoincrement = true)
+    private long id;
 
+    @Column
     private String url;
-
+    @Column
     private String fileDir;
-
+    @Column
     private String filePath;
-
+    @Column
+    private String tmpFileName;
+    @Column
     private long downloadedSize;
-
+    @Column
     private int downloadProgress;
-
+    @Column
     private long totalDownloadSize;
 
 
-    public String getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(long id) {
         this.id = id;
     }
 
@@ -67,6 +78,14 @@ public class DownloadFileInfo {
 
     public void setDownloadProgress(int downloadProgress) {
         this.downloadProgress = downloadProgress;
+    }
+
+    public String getTmpFileName() {
+        return tmpFileName;
+    }
+
+    public void setTmpFileName(String tmpFileName) {
+        this.tmpFileName = tmpFileName;
     }
 
     public long getTotalDownloadSize() {

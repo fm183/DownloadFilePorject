@@ -1,6 +1,6 @@
 package com.file.downloadfile.listener;
 
-import com.file.downloadfile.bean.DownloadBean;
+import com.file.downloadfile.database.model.DownloadFileInfo;
 
 /**
  *  文件下载监听
@@ -9,23 +9,23 @@ public interface FileDownloadListener{
 
     /**
      *
-     * @param downloadBean
+     * @param downloadFileInfo
      */
-    public void onFileDownloading(DownloadBean downloadBean);
+    public void onFileDownloading(DownloadFileInfo downloadFileInfo);
 
     /**
      *
-     * @param downloadBean
+     * @param downloadFileInfo
      */
-    public void onFileDownloadFail(DownloadBean downloadBean);
+    public void onFileDownloadFail(DownloadFileInfo downloadFileInfo);
     /**
      *
-     * @param downloadBean
+     * @param downloadFileInfo
      */
-    public void onFileDownloadCompleted(DownloadBean downloadBean);
+    public void onFileDownloadCompleted(DownloadFileInfo downloadFileInfo);
     /**
      *
-     * @param downloadBean
+     * @param downloadFileInfo
      */
-    public void onFileDownloadPaused(DownloadBean downloadBean);
+    public void onFileDownloadPaused(DownloadFileInfo downloadFileInfo);
 }
