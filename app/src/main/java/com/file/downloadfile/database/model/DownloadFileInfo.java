@@ -30,7 +30,16 @@ public class DownloadFileInfo extends BaseModel{
     private int downloadProgress;
     @Column
     private long totalDownloadSize;
+    @Column
+    private String failMessage;
 
+    public String getFailMessage() {
+        return failMessage;
+    }
+
+    public void setFailMessage(String failMessage) {
+        this.failMessage = failMessage;
+    }
 
     public long getId() {
         return id;
@@ -80,6 +89,7 @@ public class DownloadFileInfo extends BaseModel{
         this.downloadProgress = downloadProgress;
     }
 
+
     public String getTmpFileName() {
         return tmpFileName;
     }
@@ -94,5 +104,22 @@ public class DownloadFileInfo extends BaseModel{
 
     public void setTotalDownloadSize(long totalDownloadSize) {
         this.totalDownloadSize = totalDownloadSize;
+    }
+
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("DownloadFileInfo{");
+        sb.append("id=").append(id);
+        sb.append(", url='").append(url).append('\'');
+        sb.append(", fileDir='").append(fileDir).append('\'');
+        sb.append(", filePath='").append(filePath).append('\'');
+        sb.append(", tmpFileName='").append(tmpFileName).append('\'');
+        sb.append(", downloadedSize=").append(downloadedSize);
+        sb.append(", downloadProgress=").append(downloadProgress);
+        sb.append(", totalDownloadSize=").append(totalDownloadSize);
+        sb.append(", failMessage='").append(failMessage).append('\'');
+        sb.append('}');
+        return sb.toString();
     }
 }

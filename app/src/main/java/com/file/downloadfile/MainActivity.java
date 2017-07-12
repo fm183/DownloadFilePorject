@@ -1,6 +1,9 @@
 package com.file.downloadfile;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -10,14 +13,19 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.file.downloadfile.Utils.LogUtils;
 import com.file.downloadfile.Utils.MyDownloadUtil;
 import com.file.downloadfile.bean.DownloadBean;
+import com.file.downloadfile.database.model.DownloadFileInfo;
+import com.file.downloadfile.download.FileDownload;
+import com.file.downloadfile.listener.FileDownloadListener;
 
-import butterknife.ButterKnife;
 
+public class MainActivity extends Activity implements View.OnClickListener,FileDownloadListener {
 
-public class MainActivity extends Activity implements View.OnClickListener {
+    private static final String TAG = MainActivity.class.getSimpleName();
 
     private Button btnStopDownload;
     private TextView tvPercent;
@@ -26,16 +34,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
     public static final int STATE_START_DOWNLOAD = 0; // 开始下载
     public static final int STATE_DOWNLOADING = 1;   //  下载中
     public static final int STATE_FINISH_DOWNLOAD = 2;  // 下载完成
+    public static final int STATE_FAIL_DOWNLOAD = 3; // 下载失败
     private MyDownloadUtil myDownloadUtil;
     private DownloadBean downloadBean;
+    private FileDownload fileDownload;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        ButterKnife.bind(this);
-        myDownloadUtil = new MyDownloadUtil(this);
-        downloadBean = myDownloadUtil.getDownloadFileInfo();
+        /*myDownloadUtil = new MyDownloadUtil(this);
+        downloadBean = myDownloadUtil.getDownloadFileInfo();*/
         initView();
     }
 
@@ -44,7 +53,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         pbPercent = (ProgressBar) findViewById(R.id.pb_percent);
         findViewById(R.id.btn_start_download).setOnClickListener(this);
         findViewById(R.id.btn_stop_download).setOnClickListener(this);
-        if (downloadBean == null) {
+        FileDownload.setDebugModel(true);
+      /*  if (downloadBean == null) {
             downloadBean = new DownloadBean();
         }
         tvPercent.setText("下载进度：" + downloadBean.getDownloadProgress() + "%");
@@ -52,11 +62,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
             pbPercent.setVisibility(View.VISIBLE);
         } else {
             pbPercent.setVisibility(View.GONE);
-        }
+        }*/
     }
 
 
-    private Runnable runnable = new Runnable() {
+   /* private Runnable runnable = new Runnable() {
         @Override
         public void run() {
             myDownloadUtil.startDownload(downloadBean, DOWNLOAD_URL, new MyDownloadUtil.DownloadFileStateListener() {
@@ -90,7 +100,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
             });
         }
     };
-
+*/
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
@@ -126,6 +136,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
                     tvPercent.setText("已完成");
                     pbPercent.setVisibility(View.GONE);
                     break;
+                case STATE_FAIL_DOWNLOAD:
+                    String failReson = (String) msg.obj;
+                    Toast.makeText(MainActivity.this,failReson,Toast.LENGTH_SHORT).show();
+                    break;
             }
         }
     };
@@ -134,16 +148,20 @@ public class MainActivity extends Activity implements View.OnClickListener {
      * 停止下载文件
      */
     public void stopDownloadFile() {
-        downloadBean.setIsStopDownloadFile(true);
-        handler.removeCallbacks(runnable);
+       /* downloadBean.setIsStopDownloadFile(true);
+        handler.removeCallbacks(runnable);*/
+        fileDownload.stop();
     }
 
     /**
      * 开始下载文件
      */
     public void startDownloadFile() {
-        downloadBean.setIsStopDownloadFile(false);
-        new Thread(runnable).start();
+      /*  downloadBean.setIsStopDownloadFile(false);
+        new Thread(runnable).start();*/
+        fileDownload = new FileDownload();
+        fileDownload.setFileDownloadListener(this);
+        fileDownload.start(DOWNLOAD_URL);
     }
 
     @Override
@@ -171,4 +189,51 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    public void onFileDownloading(DownloadFileInfo downloadFileInfo) {
+        LogUtils.D(TAG, "onFileDownloading="+downloadFileInfo.toString());
+        Message message = handler.obtainMessage();
+        message.what = STATE_DOWNLOADING;
+        message.arg1 = downloadFileInfo.getDownloadProgress();
+        handler.sendMessage(message);
+    }
+
+    @Override
+    public void onFileDownloadFail(DownloadFileInfo downloadFileInfo) {
+        LogUtils.D(TAG, "onFileDownloadFail="+downloadFileInfo.toString());
+        Message message = handler.obtainMessage();
+        message.what = STATE_FAIL_DOWNLOAD;
+        message.arg1 = downloadFileInfo.getDownloadProgress();
+        handler.sendMessage(message);
+    }
+
+    @Override
+    public void onFileDownloadCompleted(DownloadFileInfo downloadFileInfo) {
+        LogUtils.D(TAG, "onFileDownloadCompleted="+downloadFileInfo.toString());
+        Message message = handler.obtainMessage();
+        message.what = STATE_FINISH_DOWNLOAD;
+        message.arg1 = downloadFileInfo.getDownloadProgress();
+        handler.sendMessage(message);
+    }
+
+    @Override
+    public void onFileDownloadPaused(DownloadFileInfo downloadFileInfo) {
+        LogUtils.D(TAG, "onFileDownloadPaused="+downloadFileInfo.toString());
+        Message message = handler.obtainMessage();
+        message.what = STATE_DOWNLOADING;
+        message.arg1 = downloadFileInfo.getDownloadProgress();
+        handler.sendMessage(message);
+    }
+
+
+    private class MyNetBroastReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            
+        }
+    }
+
+
 }
