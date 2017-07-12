@@ -1,23 +1,17 @@
 package com.file.downloadfile;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.Message;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.file.downloadfile.Utils.LogUtils;
-import com.file.downloadfile.Utils.MyDownloadUtil;
-import com.file.downloadfile.bean.DownloadBean;
+import com.file.downloadfile.Utils.WeakHandler;
 import com.file.downloadfile.database.model.DownloadFileInfo;
 import com.file.downloadfile.download.FileDownload;
 import com.file.downloadfile.listener.FileDownloadListener;
@@ -27,7 +21,7 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-    private Button btnStopDownload;
+   /* private Button btnStopDownload;*/
     private TextView tvPercent;
     private ProgressBar pbPercent;
     private static final String DOWNLOAD_URL = "http://pa-package-object.oss-cn-beijing.aliyuncs.com/f101a283db8943478d6cdd3004725232";
@@ -35,14 +29,53 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
     public static final int STATE_DOWNLOADING = 1;   //  下载中
     public static final int STATE_FINISH_DOWNLOAD = 2;  // 下载完成
     public static final int STATE_FAIL_DOWNLOAD = 3; // 下载失败
-    private MyDownloadUtil myDownloadUtil;
-    private DownloadBean downloadBean;
+/*    private MyDownloadUtil myDownloadUtil;
+    private DownloadBean downloadBean;*/
     private FileDownload fileDownload;
+    private MyWeakHandler myWeakHandler;
+
+    private static final class MyWeakHandler extends WeakHandler<MainActivity>{
+
+        public MyWeakHandler(MainActivity mainActivity) {
+            super(mainActivity);
+        }
+
+        @Override
+        public void handleMessage(Message msg, MainActivity mainActivity) {
+            if(mainActivity == null){
+                return;
+            }
+            int progress = msg.arg1;
+            switch (msg.what) {
+                case STATE_START_DOWNLOAD:
+                    mainActivity.tvPercent.setText("下载进度：" + progress + "%");
+                    mainActivity.pbPercent.setVisibility(View.VISIBLE);
+                    mainActivity.pbPercent.setProgress(progress);
+                    break;
+                case STATE_DOWNLOADING:
+
+                    mainActivity.tvPercent.setText("下载进度：" + progress + "%");
+                    mainActivity. pbPercent.setProgress(progress);
+                    break;
+                case STATE_FINISH_DOWNLOAD:
+                    mainActivity.tvPercent.setText("已完成");
+                    mainActivity.pbPercent.setVisibility(View.GONE);
+                    break;
+                case STATE_FAIL_DOWNLOAD:
+                    String failReson = (String) msg.obj;
+                    Toast.makeText(mainActivity,failReson,Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }
+    }
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        myWeakHandler = new MyWeakHandler(this);
         /*myDownloadUtil = new MyDownloadUtil(this);
         downloadBean = myDownloadUtil.getDownloadFileInfo();*/
         initView();
@@ -114,37 +147,6 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
     }
 
     /**
-     * 处理下载文件的消息
-     */
-    private Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            int progress = msg.arg1;
-            switch (msg.what) {
-                case STATE_START_DOWNLOAD:
-                    tvPercent.setText("下载进度：" + progress + "%");
-                    pbPercent.setVisibility(View.VISIBLE);
-                    pbPercent.setProgress(progress);
-                    break;
-                case STATE_DOWNLOADING:
-
-                    tvPercent.setText("下载进度：" + progress + "%");
-                    pbPercent.setProgress(progress);
-                    break;
-                case STATE_FINISH_DOWNLOAD:
-                    tvPercent.setText("已完成");
-                    pbPercent.setVisibility(View.GONE);
-                    break;
-                case STATE_FAIL_DOWNLOAD:
-                    String failReson = (String) msg.obj;
-                    Toast.makeText(MainActivity.this,failReson,Toast.LENGTH_SHORT).show();
-                    break;
-            }
-        }
-    };
-
-    /**
      * 停止下载文件
      */
     public void stopDownloadFile() {
@@ -193,47 +195,37 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
     @Override
     public void onFileDownloading(DownloadFileInfo downloadFileInfo) {
         LogUtils.D(TAG, "onFileDownloading="+downloadFileInfo.toString());
-        Message message = handler.obtainMessage();
+        Message message = myWeakHandler.obtainMessage();
         message.what = STATE_DOWNLOADING;
         message.arg1 = downloadFileInfo.getDownloadProgress();
-        handler.sendMessage(message);
+        myWeakHandler.sendMessage(message);
     }
 
     @Override
     public void onFileDownloadFail(DownloadFileInfo downloadFileInfo) {
         LogUtils.D(TAG, "onFileDownloadFail="+downloadFileInfo.toString());
-        Message message = handler.obtainMessage();
+        Message message = myWeakHandler.obtainMessage();
         message.what = STATE_FAIL_DOWNLOAD;
         message.arg1 = downloadFileInfo.getDownloadProgress();
-        handler.sendMessage(message);
+        myWeakHandler.sendMessage(message);
     }
 
     @Override
     public void onFileDownloadCompleted(DownloadFileInfo downloadFileInfo) {
         LogUtils.D(TAG, "onFileDownloadCompleted="+downloadFileInfo.toString());
-        Message message = handler.obtainMessage();
+        Message message = myWeakHandler.obtainMessage();
         message.what = STATE_FINISH_DOWNLOAD;
         message.arg1 = downloadFileInfo.getDownloadProgress();
-        handler.sendMessage(message);
+        myWeakHandler.sendMessage(message);
     }
 
     @Override
     public void onFileDownloadPaused(DownloadFileInfo downloadFileInfo) {
         LogUtils.D(TAG, "onFileDownloadPaused="+downloadFileInfo.toString());
-        Message message = handler.obtainMessage();
+        Message message = myWeakHandler.obtainMessage();
         message.what = STATE_DOWNLOADING;
         message.arg1 = downloadFileInfo.getDownloadProgress();
-        handler.sendMessage(message);
+        myWeakHandler.sendMessage(message);
     }
-
-
-    private class MyNetBroastReceiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            
-        }
-    }
-
 
 }

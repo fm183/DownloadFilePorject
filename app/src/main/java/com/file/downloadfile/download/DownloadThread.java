@@ -143,6 +143,7 @@ public class DownloadThread extends Thread {
                         if(mFileDownloadListener != null){
                             if(downloadSize == fileLength){
                                 mFileDownloadListener.onFileDownloadCompleted(mDownloadFileInfo);
+                                break;
                             }else{
                                 mFileDownloadListener.onFileDownloading(mDownloadFileInfo);
                             }
