@@ -50,9 +50,6 @@ public class DownloadThread extends Thread {
     private ByteArrayOutputStream mByteOutput;
     private File tmpFile;
 
-
-
-
     public DownloadThread(String downloadUrl, FileDownloadListener fileDownloadListener){
         this.mDownloadUrl = downloadUrl;
         this.mFileDownloadListener = fileDownloadListener;
@@ -158,6 +155,11 @@ public class DownloadThread extends Thread {
                     }
                 }
 
+            }else {
+                mDownloadFileInfo.setFailMessage(String.valueOf(code));
+                if(mFileDownloadListener != null){
+                    mFileDownloadListener.onFileDownloadFail(mDownloadFileInfo);
+                }
             }
 
         } catch (IOException e) {

@@ -19,14 +19,13 @@ android {
     }
 }
 
-    apply plugin: 'com.neenbedankt.android-apt'
-    def dbflow_version = "3.0.0-beta2"
+def dbflow_version = "3.0.0-beta2"
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    apt "com.github.Raizlabs.DBFlow:dbflow-processor:${dbflow_version}"
-    compile "com.github.Raizlabs.DBFlow:dbflow-core:${dbflow_version}"
-    compile "com.github.Raizlabs.DBFlow:dbflow:${dbflow_version}"
+    implementation  fileTree(dir: 'libs', include: ['*.jar'])
+    annotationProcessor "com.github.Raizlabs.DBFlow:dbflow-processor:${dbflow_version}"
+    implementation  "com.github.Raizlabs.DBFlow:dbflow-core:${dbflow_version}"
+    implementation  "com.github.Raizlabs.DBFlow:dbflow:${dbflow_version}"
 
     // sql-cipher database encyrption (optional)
-    compile "com.github.Raizlabs.DBFlow:dbflow-sqlcipher:${dbflow_version}"
+    implementation  "com.github.Raizlabs.DBFlow:dbflow-sqlcipher:${dbflow_version}"
 }

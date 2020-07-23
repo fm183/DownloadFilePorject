@@ -9,23 +9,19 @@ public interface FileDownloadListener{
 
     /**
      *
-     * @param downloadFileInfo
      */
-    public void onFileDownloading(DownloadFileInfo downloadFileInfo);
+    void onFileDownloading(DownloadFileInfo downloadFileInfo);
 
     /**
      *
-     * @param downloadFileInfo
      */
-    public void onFileDownloadFail(DownloadFileInfo downloadFileInfo);
+    void onFileDownloadFail(DownloadFileInfo downloadFileInfo);
     /**
      *
-     * @param downloadFileInfo
      */
-    public void onFileDownloadCompleted(DownloadFileInfo downloadFileInfo);
+    void onFileDownloadCompleted(DownloadFileInfo downloadFileInfo);
     /**
      *
-     * @param downloadFileInfo
      */
-    public void onFileDownloadPaused(DownloadFileInfo downloadFileInfo);
+    void onFileDownloadPaused(DownloadFileInfo downloadFileInfo);
 }

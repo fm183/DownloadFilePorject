@@ -1,10 +1,14 @@
 package com.file.downloadfile;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Message;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -16,12 +20,13 @@ import com.file.downloadfile.database.model.DownloadFileInfo;
 import com.file.downloadfile.download.FileDownload;
 import com.file.downloadfile.listener.FileDownloadListener;
 
+import java.lang.ref.WeakReference;
+
 
 public class MainActivity extends Activity implements View.OnClickListener,FileDownloadListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-   /* private Button btnStopDownload;*/
     private TextView tvPercent;
     private ProgressBar pbPercent;
     private static final String DOWNLOAD_URL = "http://pa-package-object.oss-cn-beijing.aliyuncs.com/f101a283db8943478d6cdd3004725232";
@@ -29,14 +34,15 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
     public static final int STATE_DOWNLOADING = 1;   //  下载中
     public static final int STATE_FINISH_DOWNLOAD = 2;  // 下载完成
     public static final int STATE_FAIL_DOWNLOAD = 3; // 下载失败
-/*    private MyDownloadUtil myDownloadUtil;
-    private DownloadBean downloadBean;*/
+    public static final int STATE_STOP_DOWNLOAD = 4;// 停止下载
     private FileDownload fileDownload;
     private MyWeakHandler myWeakHandler;
+    private MyBroadcastReceiver myBroadcastReceiver;
+    private int mStatus;
 
     private static final class MyWeakHandler extends WeakHandler<MainActivity>{
 
-        public MyWeakHandler(MainActivity mainActivity) {
+        private MyWeakHandler(MainActivity mainActivity) {
             super(mainActivity);
         }
 
@@ -69,16 +75,41 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
         }
     }
 
+    private static final class MyBroadcastReceiver extends BroadcastReceiver{
 
+        private WeakReference<MainActivity> weakReference;
+        private MyBroadcastReceiver(MainActivity mainActivity) {
+            weakReference = new WeakReference<>(mainActivity);
+        }
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            MainActivity mainActivity = weakReference == null ? null : weakReference.get();
+            if (mainActivity == null) {
+                return;
+            }
+            if (CONNECTIVITY_SERVICE.equals(intent.getAction())) {
+                ConnectivityManager connMgr = (ConnectivityManager) mainActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
+                if(connMgr == null) {
+                    return;
+                }
+                NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+                boolean isConnected = networkInfo != null && networkInfo.isConnected();
+                if (isConnected && mainActivity.mStatus == STATE_STOP_DOWNLOAD) {
+                    mainActivity.startDownloadFile();
+                }else if (!isConnected && mainActivity.mStatus == STATE_DOWNLOADING){
+                    mainActivity.stopDownloadFile();
+                }
+            }
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         myWeakHandler = new MyWeakHandler(this);
-        /*myDownloadUtil = new MyDownloadUtil(this);
-        downloadBean = myDownloadUtil.getDownloadFileInfo();*/
         initView();
+        initBroadcastReceiver();
     }
 
     private void initView() {
@@ -87,53 +118,21 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
         findViewById(R.id.btn_start_download).setOnClickListener(this);
         findViewById(R.id.btn_stop_download).setOnClickListener(this);
         FileDownload.setDebugModel(true);
-      /*  if (downloadBean == null) {
-            downloadBean = new DownloadBean();
-        }
-        tvPercent.setText("下载进度：" + downloadBean.getDownloadProgress() + "%");
-        if (downloadBean.getDownloadProgress() > 0) {
-            pbPercent.setVisibility(View.VISIBLE);
-        } else {
-            pbPercent.setVisibility(View.GONE);
-        }*/
     }
 
+    private void initBroadcastReceiver(){
+        myBroadcastReceiver = new MyBroadcastReceiver(this);
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(CONNECTIVITY_SERVICE);
+        registerReceiver(myBroadcastReceiver,intentFilter);
+    }
 
-   /* private Runnable runnable = new Runnable() {
-        @Override
-        public void run() {
-            myDownloadUtil.startDownload(downloadBean, DOWNLOAD_URL, new MyDownloadUtil.DownloadFileStateListener() {
-                @Override
-                public void onStartDownload(int progress) {
-                    Message message = handler.obtainMessage();
-                    message.what = STATE_START_DOWNLOAD;
-                    message.arg1 = progress;
-                    handler.sendMessage(message);
-                }
-
-                @Override
-                public void onDownloadProgress(int progress, String downloadSize) {
-                    Message message = handler.obtainMessage();
-                    message.what = STATE_DOWNLOADING;
-                    message.arg1 = progress;
-                    handler.sendMessage(message);
-                }
-
-                @Override
-                public void onDownloadFinish() {
-                    Message message = handler.obtainMessage();
-                    message.what = STATE_FINISH_DOWNLOAD;
-                    handler.sendMessage(message);
-                }
-
-                @Override
-                public void onStopDownload() {
-
-                }
-            });
+    private void unregisterBroadcastReceiver(){
+        if (myBroadcastReceiver != null) {
+            unregisterReceiver(myBroadcastReceiver);
         }
-    };
-*/
+    }
+
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
@@ -150,8 +149,6 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
      * 停止下载文件
      */
     public void stopDownloadFile() {
-       /* downloadBean.setIsStopDownloadFile(true);
-        handler.removeCallbacks(runnable);*/
         fileDownload.stop();
     }
 
@@ -159,8 +156,6 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
      * 开始下载文件
      */
     public void startDownloadFile() {
-      /*  downloadBean.setIsStopDownloadFile(false);
-        new Thread(runnable).start();*/
         fileDownload = new FileDownload();
         fileDownload.setFileDownloadListener(this);
         fileDownload.start(DOWNLOAD_URL);
@@ -170,26 +165,7 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
     protected void onDestroy() {
         super.onDestroy();
         stopDownloadFile();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
+        unregisterBroadcastReceiver();
     }
 
     @Override
@@ -199,6 +175,7 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
         message.what = STATE_DOWNLOADING;
         message.arg1 = downloadFileInfo.getDownloadProgress();
         myWeakHandler.sendMessage(message);
+        mStatus = STATE_DOWNLOADING;
     }
 
     @Override
@@ -207,7 +184,9 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
         Message message = myWeakHandler.obtainMessage();
         message.what = STATE_FAIL_DOWNLOAD;
         message.arg1 = downloadFileInfo.getDownloadProgress();
+        message.obj = downloadFileInfo.getFailMessage();
         myWeakHandler.sendMessage(message);
+        mStatus = STATE_FAIL_DOWNLOAD;
     }
 
     @Override
@@ -217,6 +196,8 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
         message.what = STATE_FINISH_DOWNLOAD;
         message.arg1 = downloadFileInfo.getDownloadProgress();
         myWeakHandler.sendMessage(message);
+        mStatus = STATE_FINISH_DOWNLOAD;
+
     }
 
     @Override
@@ -226,6 +207,7 @@ public class MainActivity extends Activity implements View.OnClickListener,FileD
         message.what = STATE_DOWNLOADING;
         message.arg1 = downloadFileInfo.getDownloadProgress();
         myWeakHandler.sendMessage(message);
+        mStatus = STATE_STOP_DOWNLOAD;
     }
 
 }
